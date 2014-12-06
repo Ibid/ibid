@@ -128,7 +128,7 @@ class Braai(Processor):
     grills = {}
 
     time = IntOption('braai_time', u'Braaiing time in seconds', 300)
-    bites = IntOption('Braai_spots', u'Maximum number of bites', 6)
+    bites = IntOption('braai_spots', u'Maximum number of bites', 6)
 
     def braai_announce(self, event):
         event.addresponse(u"Braai's ready for %s!",
