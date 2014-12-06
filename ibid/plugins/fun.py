@@ -118,7 +118,7 @@ class Coffee(Processor):
 
 features['braai'] = {
     'description': u'Times a braai and reserves bites for people',
-    'categories': ('fun', 'monitor'),
+    'categories': ('fun', 'South Africa',),
 }
 
 class Braai(Processor):
@@ -128,7 +128,7 @@ class Braai(Processor):
     grills = {}
 
     time = IntOption('braai_time', u'Braaiing time in seconds', 300)
-    bites = IntOption('braai_spots', u'Maximum number of bites', 6)
+    bites = IntOption('braai_bites', u'Maximum number of bites', 6)
 
     def braai_announce(self, event):
         event.addresponse(u"Braai's ready for %s!",
