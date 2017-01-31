@@ -7,6 +7,7 @@ from random import choice
 import re
 
 from dateutil.tz import tzlocal, tzutc
+from sqlalchemy import text
 
 from ibid.plugins import Processor, match, handler, authorise, auth_responses, \
                          RPC
@@ -238,7 +239,7 @@ def get_factoid(session, name, number, pattern, is_regex, all=False,
             # Reversed LIKE because factoid name contains SQL wildcards if
             # factoid supports arguments
             query = query.filter(
-                    'lower(:fact) LIKE lower(name) ESCAPE :escape'
+                    text('lower(:fact) LIKE lower(name) ESCAPE :escape')
                 ).params(fact=name, escape='\\')
         else:
             query = query.filter(FactoidName.name == escape_name(name))

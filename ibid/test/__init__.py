@@ -105,9 +105,6 @@ class PluginTestCase(TestCase):
 
     def setUp(self):
         super(PluginTestCase, self).setUp()
-        if sqlalchemy.__version__ > '0.6.0':
-            raise unittest.SkipTest(
-                    "PluginTestCase doesn't work with SQLAlchemy 0.6")
         if self.network and os.getenv('IBID_NETWORKLESS_TEST') is not None:
             raise unittest.SkipTest('test uses network')
 

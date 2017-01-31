@@ -62,6 +62,6 @@ def get_html_parse_tree(url, data=None, headers={}, treetype='beautifulsoup'):
             treetype = "beautifulsoup"
         parser = HTMLParser(tree=treebuilders.getTreeBuilder(treetype))
 
-    return parser.parse(data, encoding = encoding)
+    return parser.parse(data)
 
 # vi: set et sta sw=4 ts=4:
