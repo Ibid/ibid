@@ -11,9 +11,9 @@ class UnihanTest(ibid.test.PluginTestCase):
 
     def test_simp_trad(self):
         self.assertResponseMatches(u'unihan \u9A6C',
-                                   u'.*the traditional form is \u99AC')
+                                   u'.*he traditional form is \u99AC')
         self.assertResponseMatches(u'unihan \u99AC',
-                                   u'.*the simplified form is \u9A6C')
+                                   u'.*he simplified form is \u9A6C')
 
 class CurrencyLookupTest(ibid.test.TestCase):
     network = True

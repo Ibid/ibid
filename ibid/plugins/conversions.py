@@ -12,7 +12,8 @@ from ibid.plugins import Processor, handler, match
 from ibid.compat import any, defaultdict, ElementTree
 from ibid.config import Option
 from ibid.utils import (cacheable_download, file_in_path, get_country_codes,
-                        human_join, unicode_output, generic_webservice)
+                        human_join, unicode_output, generic_webservice,
+                        decode_htmlentities)
 from ibid.utils.html import get_html_parse_tree
 
 features = {}
@@ -313,7 +314,7 @@ class Currency(Processor):
 
     def _load_currencies(self):
         iso4127_file = cacheable_download(
-                'http://www.currency-iso.org/dam/downloads/table_a1.xml',
+            'http://www.currency-iso.org/dam/downloads/lists/list_one.xml',
                 'conversions/iso4217.xml')
         document = ElementTree.parse(iso4127_file)
         # Code -> [Countries..., Currency Name, post-decimal digits]
@@ -321,34 +322,43 @@ class Currency(Processor):
         # Country -> Code
         self.country_currencies = {}
         self.country_codes = get_country_codes()
+        # Exceptions
+        country_name_exceptions = {
+            'United States Of America': 'United States',
+            'United Kingdom Of Great Britain And Northern Ireland': 'United Kingdom',
+            'Holy See': 'Holy See (Vatican City State)'
+        }
         # Non-currencies:
-        non_currencies = set(('BOV CLF COU MXV '
-                              'UYI XSU XUA '     # Various Fund codes
-                              'CHE CHW '         # Swiss WIR currencies
-                              'USN USS '         # US Dollar fund codes
-                              'XAG XAU XPD XPT ' # Metals
-                              'XBA XBB XBC XBD ' # Euro Bond Market
-                              'XDR XTS XXX '     # Other specials
-                             ).split())
         no_country_codes = set(('Saint Martin',
-                                'Virgin Islands (Us)',
+                                'Virgin Islands (U.S.)',
                                 'Virgin Islands (British)',))
         accociated_all_countries = True
         for currency in document.getiterator('CcyNtry'):
             if not currency.findtext('Ccy'):
                 continue
             code = currency.findtext('Ccy').strip()
-            name = currency.findtext('CcyNm').strip()
+            name = currency.find('CcyNm')
             place = currency.findtext('CtryNm').strip().title()
+            # Countries with (The)
+            if u' (The)' in place:
+                place = place.replace(u' (The)', u'')
+            # Countries with (Federated States Of))
+            if u' (Federated States Of)' in place:
+                place = place.replace(u' (Federated States Of)',
+                                      u', Federated States Of')
+
             try:
                 minor_units = int(currency.findtext('CcyMnrUnts').strip())
             except ValueError:
-                minor_units = 2
-            if code == '' or code in non_currencies:
+                # Currencies with no minor unit are monetary funds
                 continue
             # Fund codes
             if re.match(r'^Zz[0-9]{2}', place, re.UNICODE):
                 continue
+            if name.attrib.get('IsFund') == 'true' or code == '':
+                continue
+            else:
+                name = name.text.strip()
             if code in self.currencies:
                 self.currencies[code][0].append(place)
             else:
@@ -365,7 +375,8 @@ class Currency(Processor):
             m = re.match(r'^(.+?)\s+\((.+)\)$', place)
             if m is not None:
                 swapped_place = '%s (%s)' % (m.group(2), m.group(1))
-
+            if place in country_name_exceptions:
+                place = country_name_exceptions[place]
             for ccode, country in self.country_codes.iteritems():
                 country = country.title()
                 if country in (place, swapped_place):
@@ -548,7 +559,7 @@ def html_flatten(soup):
         else:
             text.append(html_flatten(subsoup))
     return ''.join(text)
-    
+
 class Unihan(object):
     def __init__(self, char):
         self.char = char
@@ -556,32 +567,46 @@ class Unihan(object):
         params = {'codepoint': self.char.encode('utf8'),
                   'useuft8': 'true'}
         soup = get_html_parse_tree(url + urlencode(params),
-                                            treetype='html5lib-beautifulsoup')
+                                            treetype='beautifulsoup')
 
         tables = soup('table', border="1")
 
         self.data = defaultdict(unicode,
-                                ((html_flatten(td).strip() for td in row('td'))
+                                ((decode_htmlentities(html_flatten(td).strip()) for td in row('td'))
                                  for table in tables for row in table('tr')[1:]))
 
     def pinyin(self):
-        return map(fix_pinyin_tone, self.data['kMandarin'].lower().split())
+        if 'kMandarin' in self.data:
+            return map(fix_pinyin_tone, self.data['kMandarin'].lower().split())
+        return None
 
     def hangul(self):
-        return self.data['kHangul'].split()
+        if 'kHangul' in self.data:
+            return self.data['kHangul'].split()
+        return None
 
     def korean_yale(self):
-        return self.data['kKorean'].lower().split()
+        if 'kKorean' in self.data:
+            return self.data['kKorean'].lower().split()
+        return None
 
     def korean(self):
-        return [u'%s [%s]' % (h, y) for h, y in
+        hangul = self.hangul()
+        yale = self.korean_yale()
+        if hangul and yale:
+            return [u'%s [%s]' % (h, y) for h, y in
                                     zip(self.hangul(), self.korean_yale())]
+        return None
 
     def japanese_on(self):
-        return self.data['kJapaneseOn'].lower().split()
+        if 'kJapaneseOn' in self.data:
+            return self.data['kJapaneseOn'].lower().split()
+        return None
 
     def japanese_kun(self):
-        return self.data['kJapaneseKun'].lower().split()
+        if 'kJapaneseKun' in self.data:
+            return self.data['kJapaneseKun'].lower().split()
+        return None
 
     def definition(self):
         return self.data['kDefinition']
@@ -589,8 +614,8 @@ class Unihan(object):
     def variant(self):
         msgs = []
         for name in ('simplified', 'traditional'):
-            variants = self.data['k' + name.title() + 'Variant'].split()[1::2]
-            if variants:
+            if 'k' + name.title() + 'Variant' in self.data:
+                variants = self.data['k' + name.title() + 'Variant'].split()[1::2]
                 msgs.append(u'the %(name)s form is %(var)s' %
                             {'name': name,
                              'var': human_join(variants, conjunction='or')})

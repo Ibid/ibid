@@ -14,6 +14,7 @@ import os
 import os.path
 import re
 import socket
+from HTMLParser import HTMLParser
 from StringIO import StringIO
 from sys import version_info
 from threading import Lock
@@ -50,11 +51,8 @@ def ago(delta, units=None):
     return formatted.replace(' and ', ', ', len(parts)-2)
 
 def decode_htmlentities(text):
-    replace = lambda match: unichr(int(match.group(1)))
-    text = re.sub("&#(\d+);", replace, text)
-
-    replace = lambda match: match.group(1) in name2codepoint and unichr(name2codepoint[match.group(1)]) or match.group(0)
-    text = re.sub("&(\w+);", replace, text)
+    parser = HTMLParser()
+    text = parser.unescape(text)
     return text
 
 downloads_in_progress = defaultdict(Lock)
@@ -358,7 +356,7 @@ def indefinite_article(noun_phrase):
 
 def get_country_codes():
     filename = cacheable_download(
-            'http://www.iso.org/iso/list-en1-semic-3.txt',
+        'http://data.okfn.org/data/core/country-list/r/data.csv',
             'lookup/iso-3166-1_list_en.txt')
 
     f = codecs.open(filename, 'r', 'UTF-8')
@@ -377,8 +375,14 @@ def get_country_codes():
         if not started:
             started = True
             continue
-        if ';' in line:
-            country, code = line.split(u';')
+        if '",' in line:
+            country, code = line.split(u'",')
+            country = country.lower().replace(u'"', u'')
+            # Hack around http://bugs.python.org/issue7008
+            country = country.title().replace(u"'S", u"'s")
+            countries[code] = country
+        elif ',' in line:
+            country, code = line.split(u',')
             country = country.lower()
             # Hack around http://bugs.python.org/issue7008
             country = country.title().replace(u"'S", u"'s")
