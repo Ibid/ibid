@@ -251,7 +251,7 @@ def get_factoid(session, name, number, pattern, is_regex, all=False,
                 op = get_regexp_op(session)
                 query = query.filter(op(FactoidValue.value, pattern))
             else:
-                pattern = '%%%s%%' % escape_like_re.sub(r'#\1', pattern)
+                pattern = '%%%s%%' % escape_like_re.sub(r'#\1', pattern.lower())
                 query = query.filter(func.lower(FactoidValue.value)
                                      .like(pattern, escape='#'))
 
