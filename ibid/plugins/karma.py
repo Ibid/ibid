@@ -177,8 +177,8 @@ class Get(Processor):
 
         if karmas:
             event.addresponse(u', '.join(
-                u'%s: %s (%s)'
-                % (karmas.index(karma), karma.subject, karma.value)
+                u'%s (%s)'
+                % (karma.subject, karma.value)
                 for karma in karmas))
         else:
             event.addresponse(u"I don't really care about anything")
