@@ -116,6 +116,59 @@ class Coffee(Processor):
             self.pots[(event.source, event.channel)].append(event.sender['nick'])
             event.addresponse(True)
 
+features['braai'] = {
+    'description': u'Times a braai and reserves bites for people',
+    'categories': ('fun', 'South Africa',),
+}
+
+class Braai(Processor):
+    usage = u'braai (on|please)'
+    features = ('braai',)
+
+    grills = {}
+
+    time = IntOption('braai_time', u'Braaiing time in seconds', 300)
+    bites = IntOption('braai_bites', u'Maximum number of bites', 6)
+
+    def braai_announce(self, event):
+        event.addresponse(u"Braai's ready for %s!",
+                human_join(self.grills[(event.source, event.channel)]))
+        del self.grills[(event.source, event.channel)]
+
+    @match(r'^braai\s+on$')
+    def braai_on(self, event):
+        if (event.source, event.channel) in self.grills:
+            if len(self.grills[(event.source, event.channel)]) >= self.bites
+                event addresponse(u"There's already a grill on, and it's all reserved")
+            elif event.sender['nick'] in self.grills[(event.source, event channel)]:
+                event.addresponse(u"You already have a grill on the fire")
+            else:
+                event.addresponse(u"There's already a grill on the fire. If you ask nicely maybe you can get a bite")
+            return
+
+        self.grills[(event.source, event.channel)] = [event.sender['nick']]
+        ibid.dispatcher.call_later(self.time, self.braai_announce, event)
+
+        event.addresponse(choice((
+            u'starts the fire',
+            u'turns on the gas',
+            u'packs the wood',
+            u'scratches the coals',
+            )), action=True)
+
+    @match(r'^braai\s+(?:please|pls)$')
+    def braai_accept(self, event):
+        if (event.source, event.channel) not in self.grills:
+            event.addresponse(u"There isn't a braai on")
+        elif len(self.grills[(event.source, event.channel)]) >= self.bites:
+            event.addresponse(u"Sorry, there aren't any more bites left")
+        elif event.sender['nick'] in self.grills[(event.source, event.channel)]:
+            event.addresponse(u"Now now, you are fat enough as it is")
+        else:
+            self.pots[(event.source, event.channel)].append(event.sender['nick'])
+            event.addresponse(True)
+
+
 features['remind'] = {
     'description': u'Sets a timed reminder',
     'categories': ('fun', 'monitor', 'remember', 'message',),
