@@ -11,6 +11,7 @@ install_requires=[
     'configobj>=4.7.0',
     'dnspython',
     'feedparser',
+    'pytest',
     'html2text',
     'html5lib',
     'jinja2',
@@ -20,6 +21,8 @@ install_requires=[
     'SQLAlchemy>=0.6',
     'Twisted[tls]',
     'wokkel>=0.6.3',
+    'service_identity',
+    'pyasn1',
 ]
 
 if version_info[0] == 2 and version_info[1] < 6:
